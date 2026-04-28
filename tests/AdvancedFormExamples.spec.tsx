@@ -106,24 +106,193 @@ describe("Advanced Form Testing", () => {
      * - Shows how to verify checkbox state
      * - Uses userEvent.click() for checkbox interaction
      */
-    test("should toggle checkbox using userEvent.click()", () => {
+
+    test("should find elements using getByTestId", () => {
         render(<MockFormComponent />);
 
-        // Find checkbox by label text
+        // Find by test ID (useful when role/label aren't sufficient)
+        const checkbox = screen.getByTestId("subscribe-checkbox");
+        expect(checkbox).toBeInTheDocument();
+        expect(checkbox).not.toBeChecked();
+
+        userEvent.click(checkbox);
+        expect(checkbox).toBeChecked();
+    });
+
+    test("should select radio buttons using userEvent.click()", () => {
+        render(<MockFormComponent />);
+
+        // Find all radio buttons
+        const basicRadio = screen.getByRole("radio", { name: /basic plan/i });
+        const premiumRadio = screen.getByRole("radio", {
+            name: /premium plan/i,
+        });
+        const enterpriseRadio = screen.getByRole("radio", {
+            name: /enterprise plan/i,
+        });
+
+        // Initially, basic should be checked
+        expect(basicRadio).toBeChecked();
+        expect(premiumRadio).not.toBeChecked();
+        expect(enterpriseRadio).not.toBeChecked();
+
+        // Click premium radio
+        userEvent.click(premiumRadio);
+        expect(basicRadio).not.toBeChecked();
+        expect(premiumRadio).toBeChecked();
+        expect(enterpriseRadio).not.toBeChecked();
+
+        // Click enterprise radio
+        userEvent.click(enterpriseRadio);
+        expect(basicRadio).not.toBeChecked();
+        expect(premiumRadio).not.toBeChecked();
+        expect(enterpriseRadio).toBeChecked();
+    });
+
+    test("should type in text input found by label", () => {
+        render(<MockFormComponent />);
+
+        const nameInput = screen.getByLabelText(/full name/i);
+        expect(nameInput).toHaveValue("");
+
+        userEvent.type(nameInput, "John Doe");
+        expect(nameInput).toHaveValue("John Doe");
+    });
+
+    test("should handle complete form interaction sequence", () => {
+        const mockSubmit = jest.fn();
+
+        render(<MockFormComponent onSubmit={mockSubmit} />);
+
+        // Step 1: Enter name
+        const nameInput = screen.getByLabelText(/full name/i);
+        userEvent.type(nameInput, "Jane Smith");
+        expect(nameInput).toHaveValue("Jane Smith");
+
+        // Step 2: Check subscribe checkbox
+        const checkbox = screen.getByRole("checkbox", {
+            name: /subscribe to newsletter/i,
+        });
+        userEvent.click(checkbox);
+        expect(checkbox).toBeChecked();
+
+        // Step 3: Select premium plan radio
+        const premiumRadio = screen.getByRole("radio", {
+            name: /premium plan/i,
+        });
+        userEvent.click(premiumRadio);
+        expect(premiumRadio).toBeChecked();
+
+        // Step 4: Submit form
+        const submitButton = screen.getByRole("button", { name: /submit/i });
+        userEvent.click(submitButton);
+
+        // Verify callback was called with correct data
+        expect(mockSubmit).toHaveBeenCalledTimes(1);
+        expect(mockSubmit).toHaveBeenCalledWith({
+            name: "Jane Smith",
+            subscribe: true,
+            plan: "premium",
+        });
+    });
+
+    test("should find radio buttons within fieldset", () => {
+        render(<MockFormComponent />);
+
+        // Find by legend text
+        const planSection = screen.getByRole("group", {
+            name: /choose a plan/i,
+        });
+        expect(planSection).toBeInTheDocument();
+    });
+
+    test("should find all radio buttons using getAllByRole", () => {
+        render(<MockFormComponent />);
+
+        const radioButtons = screen.getAllByRole("radio");
+        expect(radioButtons).toHaveLength(3);
+
+        expect(radioButtons[0]).toHaveAttribute("value", "basic");
+        expect(radioButtons[1]).toHaveAttribute("value", "premium");
+        expect(radioButtons[2]).toHaveAttribute("value", "enterprise");
+    });
+
+    test("should interact with checkbox using keyboard", () => {
+        render(<MockFormComponent />);
+
         const checkbox = screen.getByRole("checkbox", {
             name: /subscribe to newsletter/i,
         });
 
-        // Initially unchecked
-        expect(checkbox).not.toBeChecked();
+        // Focus using tab
+        userEvent.tab();
+        userEvent.tab(); // Tab to checkbox (after name input)
 
-        // Click to check
+        // Toggle with space key
+        userEvent.keyboard(" ");
+        expect(checkbox).toBeChecked();
+
+        userEvent.keyboard(" ");
+        expect(checkbox).not.toBeChecked();
+    });
+
+    test("should verify input attributes", () => {
+        render(<MockFormComponent />);
+
+        const nameInput = screen.getByLabelText(/full name/i);
+        expect(nameInput).toHaveAttribute("type", "text");
+        expect(nameInput).toHaveAttribute("id", "name-input");
+
+        const checkbox = screen.getByRole("checkbox");
+        expect(checkbox).toHaveAttribute("type", "checkbox");
+    });
+
+    test("should verify initial radio button selection", () => {
+        render(<MockFormComponent />);
+
+        const basicRadio = screen.getByRole("radio", { name: /basic plan/i });
+
+        // Basic plan should be selected by default
+        expect(basicRadio).toBeChecked();
+
+        // Demonstrating toHaveAttribute for checking value attribute
+        expect(basicRadio).toHaveAttribute("value", "basic");
+    });
+
+    test("should clear and re-type in input field", () => {
+        render(<MockFormComponent />);
+
+        const nameInput = screen.getByLabelText(/full name/i);
+
+        // Type initial value
+        userEvent.type(nameInput, "First Name");
+        expect(nameInput).toHaveValue("First Name");
+
+        // Clear and type new value
+        userEvent.clear(nameInput);
+        expect(nameInput).toHaveValue("");
+
+        userEvent.type(nameInput, "New Name");
+        expect(nameInput).toHaveValue("New Name");
+    });
+
+    test("should handle checkbox state independently", () => {
+        render(<MockFormComponent />);
+
+        const checkbox = screen.getByRole("checkbox", {
+            name: /subscribe to newsletter/i,
+        });
+
+        // Check it
         userEvent.click(checkbox);
         expect(checkbox).toBeChecked();
 
-        // Click again to uncheck
-        userEvent.click(checkbox);
-        expect(checkbox).not.toBeChecked();
+        // The state should persist even after other interactions
+        const nameInput = screen.getByLabelText(/full name/i);
+        userEvent.type(nameInput, "Test");
+
+        // Checkbox should still be checked
+        expect(checkbox).toBeChecked();
     });
 
     /**

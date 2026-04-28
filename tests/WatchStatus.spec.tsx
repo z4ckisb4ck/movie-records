@@ -2,20 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { WatchStatus } from "../src/components/WatchStatus";
 
 describe("WatchStatus component", () => {
-    const seenWatchStatus = {
-        seen: false,
-        liked: false,
-        when: null,
-    };
-    it("Renders the watch status", () => {
-        render(<WatchStatus watched={seenWatchStatus}></WatchStatus>);
-    });
-    it("Renders the watch status", () => {
-        render(<WatchStatus watched={seenWatchStatus}></WatchStatus>);
-        const watchedText = screen.getByText(/Watched/i);
-        expect(watchedText).toBeInTheDocument();
-    });
-    it("Renders the watch status", () => {
+    test("renders the unseen state", () => {
         render(
             <WatchStatus
                 watched={{
@@ -25,7 +12,21 @@ describe("WatchStatus component", () => {
                 }}
             ></WatchStatus>,
         );
-        const watchedText = screen.getByText(/Not yet watched/i);
-        expect(watchedText).toBeInTheDocument();
+
+        expect(screen.getByText(/^not yet watched$/i)).toBeInTheDocument();
+    });
+
+    test("renders the watched state", () => {
+        render(
+            <WatchStatus
+                watched={{
+                    seen: true,
+                    liked: true,
+                    when: "2024-04-28",
+                }}
+            ></WatchStatus>,
+        );
+
+        expect(screen.getByText(/^watched$/i)).toBeInTheDocument();
     });
 });
